@@ -1,0 +1,385 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+const navItems = [
+  { id: "tasks", label: "Tasks" },
+  { id: "calendar", label: "Calendar" },
+  { id: "projects", label: "Projects" },
+  { id: "memories", label: "Memories" },
+  { id: "docs", label: "Docs" },
+  { id: "team", label: "Team" },
+  { id: "office", label: "Office" },
+] as const;
+
+const STATUSES = ["backlog", "in-progress", "review", "done"] as const;
+
+const STATUS_LABELS: Record<(typeof STATUSES)[number], string> = {
+  "backlog": "Backlog",
+  "in-progress": "In Progress",
+  "review": "Review",
+  "done": "Done",
+};
+
+export type TaskStatus = (typeof STATUSES)[number];
+
+export type Task = {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  assignee?: string;
+  priority?: "low" | "medium" | "high";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ActivityEvent = {
+  id: string;
+  type: "task_created" | "task_status_changed";
+  taskId: string;
+  taskTitle: string;
+  fromStatus?: TaskStatus;
+  toStatus?: TaskStatus;
+  createdAt: string;
+};
+
+const STORAGE_KEY_TASKS = "mission-control:tasks";
+const STORAGE_KEY_ACTIVITY = "mission-control:activity";
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveToStorage<T>(key: string, value: T) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore
+  }
+}
+
+export default function Home() {
+  const [tasks, setTasks] = useState<Task[]>(() =>
+    loadFromStorage<Task[]>(STORAGE_KEY_TASKS, [])
+  );
+  const [activity, setActivity] = useState<ActivityEvent[]>(() =>
+    loadFromStorage<ActivityEvent[]>(STORAGE_KEY_ACTIVITY, [])
+  );
+
+  const [newTitle, setNewTitle] = useState("");
+  const [newAssignee, setNewAssignee] = useState("");
+  const [newPriority, setNewPriority] = useState<"low" | "medium" | "high">(
+    "medium"
+  );
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEY_TASKS, tasks);
+  }, [tasks]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEY_ACTIVITY, activity);
+  }, [activity]);
+
+  const tasksByStatus = useMemo(() => {
+    return STATUSES.reduce((acc, status) => {
+      acc[status] = tasks.filter((t) => t.status === status);
+      return acc;
+    }, {} as Record<TaskStatus, Task[]>);
+  }, [tasks]);
+
+  function addTask() {
+    const title = newTitle.trim();
+    if (!title) return;
+    const now = new Date().toISOString();
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const task: Task = {
+      id,
+      title,
+      status: "backlog",
+      assignee: newAssignee.trim() || undefined,
+      priority: newPriority,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setTasks((prev) => [task, ...prev]);
+    setActivity((prev) => [
+      {
+        id: `act-${id}`,
+        type: "task_created",
+        taskId: id,
+        taskTitle: title,
+        createdAt: now,
+      },
+      ...prev,
+    ]);
+    setNewTitle("");
+    setNewAssignee("");
+    setNewPriority("medium");
+  }
+
+  function moveTask(id: string, toStatus: TaskStatus) {
+    setTasks((prev) => {
+      const next = [...prev];
+      const index = next.findIndex((t) => t.id === id);
+      if (index === -1) return prev;
+      const task = next[index];
+      if (task.status === toStatus) return prev;
+      const fromStatus = task.status;
+      const updated: Task = {
+        ...task,
+        status: toStatus,
+        updatedAt: new Date().toISOString(),
+      };
+      next[index] = updated;
+      const event: ActivityEvent = {
+        id: `act-${updated.id}-${Date.now()}`,
+        type: "task_status_changed",
+        taskId: updated.id,
+        taskTitle: updated.title,
+        fromStatus,
+        toStatus,
+        createdAt: updated.updatedAt,
+      };
+      setActivity((prevActivity) => [event, ...prevActivity]);
+      return next;
+    });
+  }
+
+  const todaysFocus = useMemo(() => {
+    const openTasks = tasks.filter((t) => t.status !== "done");
+    if (openTasks.length === 0) return "Create your first task";
+    if (openTasks.length === 1) return openTasks[0].title;
+    return `${openTasks[0].title} (+${openTasks.length - 1} more)`;
+  }, [tasks]);
+
+  return (
+    <div className="flex min-h-screen bg-neutral-950 text-neutral-100">
+      {/* Sidebar */}
+      <aside className="hidden w-64 flex-col border-r border-neutral-800 bg-black/80 px-4 py-6 sm:flex">
+        <div className="mb-6 px-2">
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+            TrustCore
+          </div>
+          <div className="mt-1 text-lg font-semibold">Mission Control</div>
+        </div>
+        <nav className="space-y-1 text-sm">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              className={
+                item.id === "tasks"
+                  ? "flex w-full items-center justify-between rounded-md bg-neutral-800 px-3 py-2 text-neutral-50"
+                  : "flex w-full items-center justify-between rounded-md px-3 py-2 text-neutral-400 hover:bg-neutral-900 hover:text-neutral-50"
+              }
+            >
+              <span>{item.label}</span>
+              {item.id === "tasks" && (
+                <span className="rounded-full bg-emerald-500/20 px-2 text-[10px] font-medium text-emerald-400">
+                  default
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <div className="mt-auto pt-6 text-xs text-neutral-500">
+          Astra 
+          <span className="text-neutral-600">·</span> Chief of Staff
+        </div>
+      </aside>
+
+      {/* Main area */}
+      <main className="flex min-h-screen flex-1 flex-col bg-gradient-to-b from-neutral-950 to-neutral-950/95 px-4 py-4 sm:px-8 sm:py-6">
+        {/* Top bar */}
+        <header className="mb-4 flex items-center justify-between gap-4 border-b border-neutral-900 pb-3">
+          <div>
+            <h1 className="text-lg font-semibold text-neutral-50 sm:text-xl">
+              Tasks
+            </h1>
+            <p className="text-xs text-neutral-500 sm:text-sm">
+              Kanban + activity feed for Astra and the TrustCore agent team.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-neutral-500">
+            <span className="hidden sm:inline">Today&apos;s focus:</span>
+            <span className="rounded-full bg-neutral-900 px-3 py-1 text-[11px] font-medium text-emerald-400">
+              {todaysFocus}
+            </span>
+          </div>
+        </header>
+
+        {/* Task creation */}
+        <section className="mb-4 rounded-lg border border-neutral-900 bg-black/40 p-3 text-xs sm:p-4 sm:text-sm">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+              New task
+            </h2>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              type="text"
+              placeholder="What needs to happen next?"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              className="flex-1 rounded-md border border-neutral-800 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-emerald-500 focus:outline-none sm:px-3 sm:py-1.5 sm:text-sm"
+            />
+            <input
+              type="text"
+              placeholder="Assignee (optional)"
+              value={newAssignee}
+              onChange={(e) => setNewAssignee(e.target.value)}
+              className="w-full rounded-md border border-neutral-800 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-emerald-500 focus:outline-none sm:w-40 sm:px-3 sm:py-1.5 sm:text-sm"
+            />
+            <select
+              value={newPriority}
+              onChange={(e) => setNewPriority(e.target.value as any)}
+              className="w-full rounded-md border border-neutral-800 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 focus:border-emerald-500 focus:outline-none sm:w-32 sm:px-3 sm:py-1.5 sm:text-sm"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+            <button
+              type="button"
+              onClick={addTask}
+              className="w-full rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 sm:w-auto sm:text-sm"
+            >
+              Add task
+            </button>
+          </div>
+        </section>
+
+        {/* Task board layout */}
+        <section className="flex flex-1 flex-col gap-4 sm:flex-row">
+          {/* Kanban columns */}
+          <div className="flex min-h-[260px] flex-1 gap-3 rounded-lg border border-neutral-900 bg-black/40 p-3 sm:p-4">
+            {STATUSES.map((status) => {
+              const columnTasks = tasksByStatus[status];
+              return (
+                <div key={status} className="flex-1 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-neutral-400">
+                    <h2 className="font-semibold">{STATUS_LABELS[status]}</h2>
+                    <span className="rounded-full bg-neutral-900 px-1.5 py-0.5 text-[10px] text-neutral-500">
+                      {columnTasks.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {columnTasks.length === 0 ? (
+                      <div className="rounded-md border border-dashed border-neutral-800 bg-neutral-950/60 p-3 text-xs text-neutral-500">
+                        No tasks here yet.
+                      </div>
+                    ) : (
+                      columnTasks.map((task) => (
+                        <article
+                          key={task.id}
+                          className="group rounded-md border border-neutral-800 bg-neutral-950/80 p-2 text-xs text-neutral-100 shadow-sm"
+                        >
+                          <div className="mb-1 flex items-start justify-between gap-2">
+                            <h3 className="font-medium text-neutral-50">
+                              {task.title}
+                            </h3>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1 text-[10px] text-neutral-500">
+                            {task.assignee && (
+                              <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-300">
+                                {task.assignee}
+                              </span>
+                            )}
+                            {task.priority && (
+                              <span
+                                className="rounded-full px-2 py-0.5 text-[10px]"
+                                data-priority={task.priority}
+                              >
+                                {task.priority === "high" && (
+                                  <span className="text-red-400">●● High</span>
+                                )}
+                                {task.priority === "medium" && (
+                                  <span className="text-amber-300">
+                                    ● Medium
+                                  </span>
+                                )}
+                                {task.priority === "low" && (
+                                  <span className="text-emerald-300">
+                                    ● Low
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {STATUSES.filter((s) => s !== task.status).map(
+                              (targetStatus) => (
+                                <button
+                                  key={targetStatus}
+                                  type="button"
+                                  onClick={() => moveTask(task.id, targetStatus)}
+                                  className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-300 hover:border-emerald-500 hover:text-emerald-300"
+                                >
+                                  Move to {STATUS_LABELS[targetStatus]}
+                                </button>
+                              )
+                            )}
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Activity feed */}
+          <aside className="min-h-[260px] w-full rounded-lg border border-neutral-900 bg-black/50 p-3 text-xs text-neutral-400 sm:w-72 sm:p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                Activity
+              </h2>
+              <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-500">
+                live feed
+              </span>
+            </div>
+            {activity.length === 0 ? (
+              <p className="text-xs text-neutral-500">
+                No activity yet. As you create and move tasks, events will
+                appear here.
+              </p>
+            ) : (
+              <ul className="space-y-1.5">
+                {activity.slice(0, 20).map((event) => (
+                  <li key={event.id} className="leading-snug">
+                    <span className="text-neutral-300">Task</span>{" "}
+                    <span className="text-neutral-100">
+                      
+                      &ldquo;{event.taskTitle}&rdquo;
+                    </span>{" "}
+                    {event.type === "task_created" ? (
+                      <span>was created</span>
+                    ) : (
+                      <span>
+                        moved from {STATUS_LABELS[event.fromStatus!]} to {STATUS_LABELS[event.toStatus!]}
+                      </span>
+                    )}
+                    <span className="ml-1 text-[10px] text-neutral-500">
+                      {new Date(event.createdAt).toLocaleTimeString(undefined, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+        </section>
+      </main>
+    </div>
+  );
+}
