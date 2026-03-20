@@ -263,8 +263,8 @@ This repo is intended to be **shared between Astra and Alex** so that both agent
 1. **Clone this repo**
 
    ```bash
-   git clone https://github.com/djd39448/trustcore-mission-control.git
-   cd trustcore-mission-control
+   git clone https://github.com/djd39448/mission-control.git
+   cd mission-control
    npm install
    npm run dev
    ```
