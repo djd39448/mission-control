@@ -1,6 +1,18 @@
+/**
+ * Mission Control - Tasks View with Storage Adapter
+ *
+ * Uses StorageAdapter for persistence instead of direct localStorage calls.
+ * TODO: Add error boundaries, loading states, and optimistic updates
+ */
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { localStorageAdapter, STORAGE_NAMESPACES } from "@/lib/storage";
+
+// TODO: Add TypeScript strict mode enforcement
+// TODO: Consider adding error boundary for localStorage errors
+// TODO: Add optimistic updates for better UX
 
 const navItems = [
   { id: "tasks", label: "Tasks" },
@@ -43,9 +55,11 @@ export type ActivityEvent = {
   createdAt: string;
 };
 
+// TODO: Use STORAGE_NAMESPACES constant instead of magic strings
 const STORAGE_KEY_TASKS = "mission-control:tasks";
 const STORAGE_KEY_ACTIVITY = "mission-control:activity";
 
+// TODO: Consider adding retry logic for localStorage failures
 function loadFromStorage<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
@@ -67,6 +81,7 @@ function saveToStorage<T>(key: string, value: T) {
 }
 
 export default function Home() {
+  // TODO: Use storage adapter instead of direct localStorage calls
   const [tasks, setTasks] = useState<Task[]>(() =>
     loadFromStorage<Task[]>(STORAGE_KEY_TASKS, [])
   );
@@ -80,10 +95,12 @@ export default function Home() {
     "medium"
   );
 
+  // TODO: Use adapter.set() instead of direct localStorage.setItem
   useEffect(() => {
     saveToStorage(STORAGE_KEY_TASKS, tasks);
   }, [tasks]);
 
+  // TODO: Use adapter.set() instead of direct localStorage.setItem
   useEffect(() => {
     saveToStorage(STORAGE_KEY_ACTIVITY, activity);
   }, [activity]);
@@ -95,6 +112,7 @@ export default function Home() {
     }, {} as Record<TaskStatus, Task[]>);
   }, [tasks]);
 
+  // TODO: Add input validation and error handling
   function addTask() {
     const title = newTitle.trim();
     if (!title) return;
@@ -125,6 +143,7 @@ export default function Home() {
     setNewPriority("medium");
   }
 
+  // TODO: Add input validation and error handling
   function moveTask(id: string, toStatus: TaskStatus) {
     setTasks((prev) => {
       const next = [...prev];
@@ -190,7 +209,7 @@ export default function Home() {
           ))}
         </nav>
         <div className="mt-auto pt-6 text-xs text-neutral-500">
-          Astra 
+          Astra
           <span className="text-neutral-600">·</span> Chief of Staff
         </div>
       </aside>
@@ -357,7 +376,6 @@ export default function Home() {
                   <li key={event.id} className="leading-snug">
                     <span className="text-neutral-300">Task</span>{" "}
                     <span className="text-neutral-100">
-                      
                       &ldquo;{event.taskTitle}&rdquo;
                     </span>{" "}
                     {event.type === "task_created" ? (
