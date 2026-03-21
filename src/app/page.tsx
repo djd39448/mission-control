@@ -18,6 +18,12 @@ import {
   type Task,
   type ActivityEvent,
 } from "@/lib/json-io";
+import {
+  getCurrentActor,
+  setCurrentActor,
+  type Actor,
+  ACTORS,
+} from "@/lib/actor";
 
 // TODO: Add TypeScript strict mode enforcement
 // TODO: Consider adding error boundary for localStorage errors
@@ -50,6 +56,8 @@ export type Task = {
   status: TaskStatus;
   assignee?: string;
   priority?: "low" | "medium" | "high";
+  createdBy?: Actor;
+  updatedBy?: Actor;
   createdAt: string;
   updatedAt: string;
 };
@@ -59,6 +67,7 @@ export type ActivityEvent = {
   type: "task_created" | "task_status_changed";
   taskId: string;
   taskTitle: string;
+  actor: Actor;
   fromStatus?: TaskStatus;
   toStatus?: TaskStatus;
   createdAt: string;
@@ -107,6 +116,12 @@ export default function Home() {
     "medium"
   );
 
+  // TODO: Add actor selector UI
+  const currentActor = useMemo(() => getCurrentActor(), []);
+
+  // TODO: Add actor selector in Tasks view for changing current actor
+  // TODO: Add visual indicator for current actor
+
   // TODO: Add state for import feedback (success/error messages)
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
@@ -139,6 +154,8 @@ export default function Home() {
       status: "backlog",
       assignee: newAssignee.trim() || undefined,
       priority: newPriority,
+      createdBy: currentActor,
+      updatedBy: currentActor,
       createdAt: now,
       updatedAt: now,
     };
@@ -149,6 +166,7 @@ export default function Home() {
         type: "task_created",
         taskId: id,
         taskTitle: title,
+        actor: currentActor,
         createdAt: now,
       },
       ...prev,
@@ -170,6 +188,7 @@ export default function Home() {
       const updated: Task = {
         ...task,
         status: toStatus,
+        updatedBy: currentActor,
         updatedAt: new Date().toISOString(),
       };
       next[index] = updated;
@@ -178,6 +197,7 @@ export default function Home() {
         type: "task_status_changed",
         taskId: updated.id,
         taskTitle: updated.title,
+        actor: currentActor,
         fromStatus,
         toStatus,
         createdAt: updated.updatedAt,
@@ -247,8 +267,20 @@ export default function Home() {
           ))}
         </nav>
         <div className="mt-auto pt-6 text-xs text-neutral-500">
-          Astra
-          <span className="text-neutral-600">·</span> Chief of Staff
+          <div className="mb-2">Current Actor:</div>
+          <select
+            value={currentActor}
+            onChange={(e) => {
+              setCurrentActor(e.target.value as Actor);
+            }}
+            className="w-full rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 focus:border-emerald-500 focus:outline-none"
+          >
+            {ACTORS.map((actor) => (
+              <option key={actor} value={actor}>
+                {actor}
+              </option>
+            ))}
+          </select>
         </div>
       </aside>
 
@@ -442,15 +474,18 @@ export default function Home() {
               <ul className="space-y-1.5">
                 {activity.slice(0, 20).map((event) => (
                   <li key={event.id} className="leading-snug">
-                    <span className="text-neutral-300">Task</span>{" "}
+                    <span className="text-neutral-300">
+                      <span className="font-medium">{event.actor}</span>
+                    </span>{" "}
                     <span className="text-neutral-100">
                       &ldquo;{event.taskTitle}&rdquo;
                     </span>{" "}
                     {event.type === "task_created" ? (
-                      <span>was created</span>
+                      <span>created the task</span>
                     ) : (
                       <span>
-                        moved from {STATUS_LABELS[event.fromStatus!]} to {STATUS_LABELS[event.toStatus!]}
+                        moved {event.fromStatus ? `from ${STATUS_LABELS[event.fromStatus!]} to ` : "to "}
+                        <span className="font-medium text-emerald-300">{STATUS_LABELS[event.toStatus!]}</span>
                       </span>
                     )}
                     <span className="ml-1 text-[10px] text-neutral-500">
