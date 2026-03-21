@@ -9,6 +9,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { localStorageAdapter, STORAGE_NAMESPACES } from "@/lib/storage";
+import {
+  exportToJSON,
+  downloadExport,
+  importFromJSON,
+  handleFileUpload,
+  type ExportData,
+  type Task,
+  type ActivityEvent,
+} from "@/lib/json-io";
 
 // TODO: Add TypeScript strict mode enforcement
 // TODO: Consider adding error boundary for localStorage errors
@@ -55,6 +64,9 @@ export type ActivityEvent = {
   createdAt: string;
 };
 
+// TODO: Add state for import feedback/notifications
+// TODO: Add input validation and error handling for import
+
 // TODO: Use STORAGE_NAMESPACES constant instead of magic strings
 const STORAGE_KEY_TASKS = "mission-control:tasks";
 const STORAGE_KEY_ACTIVITY = "mission-control:activity";
@@ -94,6 +106,9 @@ export default function Home() {
   const [newPriority, setNewPriority] = useState<"low" | "medium" | "high">(
     "medium"
   );
+
+  // TODO: Add state for import feedback (success/error messages)
+  const [importStatus, setImportStatus] = useState<string | null>(null);
 
   // TODO: Use adapter.set() instead of direct localStorage.setItem
   useEffect(() => {
@@ -172,6 +187,29 @@ export default function Home() {
     });
   }
 
+  // TODO: Add import handler with state updates and error handling
+  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const result = await handleFileUpload(event);
+
+    if (result.success && result.tasks && result.activity) {
+      // TODO: Add confirmation dialog for merge vs replace
+      // TODO: Update state with imported data
+      setTasks(result.tasks);
+      setActivity(result.activity);
+      setImportStatus("Import successful!");
+
+      // TODO: Add auto-save with imported data
+    } else {
+      setImportStatus(
+        result.error || "Failed to import data. Please check the file format."
+      );
+
+      // TODO: Show error notification or toast
+    }
+
+    // TODO: Clear file input and status after delay
+  }
+
   const todaysFocus = useMemo(() => {
     const openTasks = tasks.filter((t) => t.status !== "done");
     if (openTasks.length === 0) return "Create your first task";
@@ -226,11 +264,21 @@ export default function Home() {
               Kanban + activity feed for Astra and the TrustCore agent team.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-neutral-500">
+          <div className="flex items-center gap-2 text-xs text-neutral-500 sm:gap-4">
             <span className="hidden sm:inline">Today&apos;s focus:</span>
             <span className="rounded-full bg-neutral-900 px-3 py-1 text-[11px] font-medium text-emerald-400">
               {todaysFocus}
             </span>
+            <button
+              type="button"
+              onClick={() => {
+                const exportData = exportToJSON(tasks, activity);
+                downloadExport(exportData);
+              }}
+              className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-[10px] text-neutral-300 hover:border-emerald-500 hover:text-emerald-300 sm:text-xs"
+            >
+              Export JSON
+            </button>
           </div>
         </header>
 
@@ -272,6 +320,26 @@ export default function Home() {
             >
               Add task
             </button>
+            <label className="w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-emerald-500 hover:text-emerald-300 sm:w-auto sm:text-sm">
+              Import JSON
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImport}
+                className="hidden"
+              />
+            </label>
+            {importStatus && (
+              <span
+                className={`rounded-md px-2 py-1 text-[10px] font-medium ${
+                  importStatus.includes("success")
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-red-500/20 text-red-400"
+                }`}
+              >
+                {importStatus}
+              </span>
+            )}
           </div>
         </section>
 
