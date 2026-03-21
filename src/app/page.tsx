@@ -354,11 +354,17 @@ export default function Home() {
             <button
               type="button"
               onClick={addTask}
-              className="w-full rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 sm:w-auto sm:text-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addTask();
+                }
+              }}
+              className="w-full rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-neutral-950 sm:w-auto sm:text-sm"
             >
               Add task
             </button>
-            <label className="w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-emerald-500 hover:text-emerald-300 sm:w-auto sm:text-sm">
+            <label className="w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-emerald-500 hover:text-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-neutral-950 sm:w-auto sm:text-sm">
               Import JSON
               <input
                 type="file"
@@ -369,7 +375,7 @@ export default function Home() {
             </label>
             {importStatus && (
               <span
-                className={`rounded-md px-2 py-1 text-[10px] font-medium ${
+                className={`rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${
                   importStatus.includes("success")
                     ? "bg-emerald-500/20 text-emerald-400"
                     : "bg-red-500/20 text-red-400"
@@ -404,39 +410,54 @@ export default function Home() {
                       columnTasks.map((task) => (
                         <article
                           key={task.id}
-                          className="group rounded-md border border-neutral-800 bg-neutral-950/80 p-2 text-xs text-neutral-100 shadow-sm"
+                          className="group relative rounded-md border border-neutral-800 bg-neutral-950/80 p-3 text-xs text-neutral-100 shadow-sm transition-all hover:border-neutral-700 hover:shadow-md"
                         >
-                          <div className="mb-1 flex items-start justify-between gap-2">
+                          <div className="mb-2 flex items-start justify-between gap-2">
                             <h3 className="font-medium text-neutral-50">
                               {task.title}
                             </h3>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-1 text-[10px] text-neutral-500">
                             {task.assignee && (
-                              <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-300">
-                                {task.assignee}
+                              <span className="flex items-center gap-1 rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-300">
+                                <span>👤</span>
+                                <span>{task.assignee}</span>
                               </span>
                             )}
+                          </div>
+                          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] text-neutral-400">
                             {task.priority && (
                               <span
-                                className="rounded-full px-2 py-0.5 text-[10px]"
+                                className="rounded-full px-2 py-0.5 transition-colors"
                                 data-priority={task.priority}
                               >
                                 {task.priority === "high" && (
-                                  <span className="text-red-400">●● High</span>
+                                  <span className="flex items-center gap-1 text-red-400 hover:text-red-300">
+                                    <span className="font-bold">●</span>
+                                    <span>High</span>
+                                  </span>
                                 )}
                                 {task.priority === "medium" && (
-                                  <span className="text-amber-300">
-                                    ● Medium
+                                  <span className="flex items-center gap-1 text-amber-300 hover:text-amber-200">
+                                    <span className="font-bold">●</span>
+                                    <span>Medium</span>
                                   </span>
                                 )}
                                 {task.priority === "low" && (
-                                  <span className="text-emerald-300">
-                                    ● Low
+                                  <span className="flex items-center gap-1 text-emerald-300 hover:text-emerald-200">
+                                    <span className="font-bold">●</span>
+                                    <span>Low</span>
                                   </span>
                                 )}
                               </span>
                             )}
+                            <span className="flex items-center gap-1 rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-400">
+                              <span>🕒</span>
+                              <span>
+                                {new Date(task.createdAt).toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
+                            </span>
                           </div>
                           <div className="mt-2 flex flex-wrap gap-1">
                             {STATUSES.filter((s) => s !== task.status).map(
@@ -445,9 +466,9 @@ export default function Home() {
                                   key={targetStatus}
                                   type="button"
                                   onClick={() => moveTask(task.id, targetStatus)}
-                                  className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-300 hover:border-emerald-500 hover:text-emerald-300"
+                                  className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-400 transition-colors hover:border-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                                 >
-                                  Move to {STATUS_LABELS[targetStatus]}
+                                  → {STATUS_LABELS[targetStatus]}
                                 </button>
                               )
                             )}
