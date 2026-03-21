@@ -19,3 +19,11 @@ export {
   type Task,
   type ActivityEvent,
 } from './json-io';
+
+// Re-exports for Actor identity
+export {
+  getCurrentActor,
+  setCurrentActor,
+  type Actor,
+  ACTORS,
+} from './actor';
