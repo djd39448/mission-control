@@ -27,3 +27,17 @@ export {
   type Actor,
   ACTORS,
 } from './actor';
+
+// Re-exports for error handling
+export {
+  StorageError,
+  TaskError,
+  ActivityError,
+  AppError,
+  safeLocalStorageOperation,
+  safeStateUpdate,
+  validateTask,
+  validateActivityEvent,
+  exportWithErrorHandling,
+  importWithErrorHandling,
+} from './errors';
