@@ -24,6 +24,12 @@ import {
   type Actor,
   ACTORS,
 } from "@/lib/actor";
+import {
+  safeLocalStorageOperation,
+  validateTask,
+  validateActivityEvent,
+  AppError,
+} from "@/lib/errors";
 
 // TODO: Add TypeScript strict mode enforcement
 // TODO: Consider adding error boundary for localStorage errors
