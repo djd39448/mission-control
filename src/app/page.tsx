@@ -9,6 +9,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { localStorageAdapter, STORAGE_NAMESPACES } from "@/lib/storage";
+import {
+  exportToJSON,
+  downloadExport,
+  importFromJSON,
+  handleFileUpload,
+  type ExportData,
+  type Task,
+  type ActivityEvent,
+} from "@/lib/json-io";
+import type { ReactNode } from "react";
+import CalendarPage from "@/app/calendar/page";
+import ProjectsPage from "@/app/projects/page";
 
 // TODO: Add TypeScript strict mode enforcement
 // TODO: Consider adding error boundary for localStorage errors
@@ -23,6 +35,12 @@ const navItems = [
   { id: "team", label: "Team" },
   { id: "office", label: "Office" },
 ] as const;
+
+const PAGE_COMPONENTS: Record<string, ReactNode> = {
+  tasks: null, // Main page
+  calendar: <CalendarPage />,
+  projects: <ProjectsPage />,
+};
 
 const STATUSES = ["backlog", "in-progress", "review", "done"] as const;
 
@@ -55,6 +73,9 @@ export type ActivityEvent = {
   createdAt: string;
 };
 
+// TODO: Add state for import feedback/notifications
+// TODO: Add input validation and error handling for import
+
 // TODO: Use STORAGE_NAMESPACES constant instead of magic strings
 const STORAGE_KEY_TASKS = "mission-control:tasks";
 const STORAGE_KEY_ACTIVITY = "mission-control:activity";
@@ -80,8 +101,30 @@ function saveToStorage<T>(key: string, value: T) {
   }
 }
 
+// TODO: Add keyboard shortcut helper function
+// TODO: Add Enter key listener for task creation
+// TODO: Add Esc key listener to clear form
+// TODO: Add visual indicator for active shortcuts (e.g., ⌘K on Mac, Ctrl+K on Windows)
+
+// Keyboard shortcut helper
+function handleKeyDown(
+  e: React.KeyboardEvent,
+  addTask: () => void,
+  setNewTitle: (value: string) => void
+) {
+  // Enter key to submit task
+  if (e.key === "Enter") {
+    addTask();
+  }
+  // Esc key to clear form
+  if (e.key === "Escape") {
+    setNewTitle("");
+  }
+}
+
 export default function Home() {
   // TODO: Use storage adapter instead of direct localStorage calls
+  // TODO: Add loading states for initial data fetch
   const [tasks, setTasks] = useState<Task[]>(() =>
     loadFromStorage<Task[]>(STORAGE_KEY_TASKS, [])
   );
@@ -89,11 +132,21 @@ export default function Home() {
     loadFromStorage<ActivityEvent[]>(STORAGE_KEY_ACTIVITY, [])
   );
 
+  // TODO: Add keyboard shortcuts (Enter to add, Esc to cancel)
+  // TODO: Add global keyboard listener for shortcuts
+  // TODO: Add visual indicator for active shortcut
+
   const [newTitle, setNewTitle] = useState("");
   const [newAssignee, setNewAssignee] = useState("");
   const [newPriority, setNewPriority] = useState<"low" | "medium" | "high">(
     "medium"
   );
+
+  // TODO: Add state for import feedback (success/error messages)
+  // TODO: Add undo/redo stack for task changes
+  // TODO: Add keyboard shortcuts (Enter to add, Esc to cancel)
+  // TODO: Add loading state for task operations
+  const [importStatus, setImportStatus] = useState<string | null>(null);
 
   // TODO: Use adapter.set() instead of direct localStorage.setItem
   useEffect(() => {
@@ -113,9 +166,15 @@ export default function Home() {
   }, [tasks]);
 
   // TODO: Add input validation and error handling
+  // TODO: Add animation for task creation (enter from right)
+  // TODO: Add animation for task movement (smooth transition)
+  // TODO: Add hover effects for task cards
   function addTask() {
     const title = newTitle.trim();
     if (!title) return;
+    // TODO: Validate title length (min 3 chars, max 100)
+    // TODO: Validate assignee selection (not empty)
+    // TODO: Validate priority selection
     const now = new Date().toISOString();
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const task: Task = {
@@ -142,6 +201,9 @@ export default function Home() {
     setNewAssignee("");
     setNewPriority("medium");
   }
+
+  // TODO: Add keyboard shortcuts for common actions (Enter to add, Esc to cancel)
+  // TODO: Add visual indicator for active shortcuts
 
   // TODO: Add input validation and error handling
   function moveTask(id: string, toStatus: TaskStatus) {
@@ -172,12 +234,39 @@ export default function Home() {
     });
   }
 
+  // TODO: Add import handler with state updates and error handling
+  async function handleImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const result = await handleFileUpload(event);
+
+    if (result.success && result.tasks && result.activity) {
+      // TODO: Add confirmation dialog for merge vs replace
+      // TODO: Update state with imported data
+      setTasks(result.tasks);
+      setActivity(result.activity);
+      setImportStatus("Import successful!");
+
+      // TODO: Add auto-save with imported data
+    } else {
+      setImportStatus(
+        result.error || "Failed to import data. Please check the file format."
+      );
+
+      // TODO: Show error notification or toast
+    }
+
+    // TODO: Clear file input and status after delay
+  }
+
   const todaysFocus = useMemo(() => {
     const openTasks = tasks.filter((t) => t.status !== "done");
     if (openTasks.length === 0) return "Create your first task";
     if (openTasks.length === 1) return openTasks[0].title;
     return `${openTasks[0].title} (+${openTasks.length - 1} more)`;
   }, [tasks]);
+
+  // TODO: Add animation for task creation (enter from right)
+  // TODO: Add animation for task movement (smooth transition)
+  // TODO: Add hover effects for task cards
 
   return (
     <div className="flex min-h-screen bg-neutral-950 text-neutral-100">
@@ -226,11 +315,21 @@ export default function Home() {
               Kanban + activity feed for Astra and the TrustCore agent team.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-neutral-500">
+          <div className="flex items-center gap-2 text-xs text-neutral-500 sm:gap-4">
             <span className="hidden sm:inline">Today&apos;s focus:</span>
             <span className="rounded-full bg-neutral-900 px-3 py-1 text-[11px] font-medium text-emerald-400">
               {todaysFocus}
             </span>
+            <button
+              type="button"
+              onClick={() => {
+                const exportData = exportToJSON(tasks, activity);
+                downloadExport(exportData);
+              }}
+              className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-[10px] text-neutral-300 hover:border-emerald-500 hover:text-emerald-300 sm:text-xs"
+            >
+              Export JSON
+            </button>
           </div>
         </header>
 
@@ -247,15 +346,20 @@ export default function Home() {
               placeholder="What needs to happen next?"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
+              onKeyDown={(e) => handleKeyDown(e, addTask, setNewTitle)}
               className="flex-1 rounded-md border border-neutral-800 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-emerald-500 focus:outline-none sm:px-3 sm:py-1.5 sm:text-sm"
             />
-            <input
-              type="text"
-              placeholder="Assignee (optional)"
+            <select
               value={newAssignee}
               onChange={(e) => setNewAssignee(e.target.value)}
-              className="w-full rounded-md border border-neutral-800 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-emerald-500 focus:outline-none sm:w-40 sm:px-3 sm:py-1.5 sm:text-sm"
-            />
+              className="w-full rounded-md border border-neutral-800 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 focus:border-emerald-500 focus:outline-none sm:w-40 sm:px-3 sm:py-1.5 sm:text-sm"
+            >
+              <option value="">Unassigned</option>
+              <option value="dave">Dave (owner)</option>
+              <option value="alex">Alex</option>
+              <option value="research">Research</option>
+              <option value="email-writer">Email Writer</option>
+            </select>
             <select
               value={newPriority}
               onChange={(e) => setNewPriority(e.target.value as any)}
@@ -272,6 +376,26 @@ export default function Home() {
             >
               Add task
             </button>
+            <label className="w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-emerald-500 hover:text-emerald-300 sm:w-auto sm:text-sm">
+              Import JSON
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImport}
+                className="hidden"
+              />
+            </label>
+            {importStatus && (
+              <span
+                className={`rounded-md px-2 py-1 text-[10px] font-medium ${
+                  importStatus.includes("success")
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-red-500/20 text-red-400"
+                }`}
+              >
+                {importStatus}
+              </span>
+            )}
           </div>
         </section>
 
