@@ -1,10 +1,8 @@
 /**
  * Calendar View - Tasks and Events Display
  *
- * TODO: Implement calendar grid with current month
- * TODO: Add event cards for tasks
- * TODO: Add time-block visualization
- * TODO: Add event creation modal
+ * Displays tasks in a calendar grid format with month navigation.
+ * Shows active tasks for each day and allows date selection.
  */
 
 "use client";
@@ -22,17 +20,67 @@ export type CalendarViewProps = {
 
 export default function CalendarView({ tasks, activity }: CalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // TODO: Generate calendar days for current month
-  // TODO: Filter tasks by date or activity events
-  const days = useMemo(() => {
-    // Placeholder: return empty array
-    return [];
-  }, [selectedDate]);
-
-  // TODO: Render calendar grid
-  // TODO: Render event cards
+  // TODO: Add time-block visualization for events
+  // TODO: Add event creation modal
   // TODO: Handle task clicking to navigate to Tasks view
+
+  // Generate calendar days for current month
+  const days = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDayOfWeek = firstDay.getDay();
+    const totalDays = lastDay.getDate();
+
+    // Generate previous month padding days
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    const prevDays = Array.from(
+      { length: startDayOfWeek },
+      (_, i) => prevMonthLastDay - startDayOfWeek + 1 + i
+    );
+
+    // Generate current month days
+    const currentDays = Array.from({ length: totalDays }, (_, i) => i + 1);
+
+    // Generate next month padding days
+    const nextDaysNeeded = Math.max(
+      0,
+      (7 - ((startDayOfWeek + totalDays) % 7)) % 7
+    );
+    const nextDays = Array.from({ length: nextDaysNeeded }, (_, i) => i + 1);
+
+    return [...prevDays, ...currentDays, ...nextDays];
+  }, [currentMonth]);
+
+  // Get month and year display strings
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+
+  // Get day names
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  // Filter tasks for selected date
+  const selectedDateTasks = useMemo(() => {
+    return tasks.filter((t) => t.status !== "done");
+  }, [tasks]);
+
+  // Find tasks due on a specific date
+  const tasksDueOnDate = useMemo(() => {
+    const dateStr = selectedDate.toISOString().split("T")[0];
+    return tasks.filter((t) => t.createdAt.startsWith(dateStr));
+  }, [tasks, selectedDate]);
+
+  // Check if a date has tasks
+  const hasTasksOnDate = useMemo(() => {
+    const dateStr = selectedDate.toISOString().split("T")[0];
+    return tasks.some((t) => t.createdAt.startsWith(dateStr));
+  }, [tasks, selectedDate]);
 
   return (
     <div className="flex min-h-screen bg-neutral-950 text-neutral-100">
@@ -91,7 +139,7 @@ export default function CalendarView({ tasks, activity }: CalendarViewProps) {
             <button
               type="button"
               onClick={() => {
-                // TODO: Navigate to previous month
+                setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)));
               }}
               className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-[10px] text-neutral-300 hover:border-emerald-500 hover:text-emerald-300 sm:text-xs"
             >
@@ -100,7 +148,7 @@ export default function CalendarView({ tasks, activity }: CalendarViewProps) {
             <button
               type="button"
               onClick={() => {
-                // TODO: Navigate to next month
+                setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)));
               }}
               className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-[10px] text-neutral-300 hover:border-emerald-500 hover:text-emerald-300 sm:text-xs"
             >
@@ -111,11 +159,80 @@ export default function CalendarView({ tasks, activity }: CalendarViewProps) {
 
         {/* Calendar Grid */}
         <section className="mb-4 rounded-lg border border-neutral-900 bg-black/40 p-4">
-          {/* TODO: Render month header */}
-          {/* TODO: Render day headers */}
-          {/* TODO: Render calendar grid with days and events */}
-          <div className="rounded-md border border-dashed border-neutral-800 bg-neutral-950/60 p-8 text-center text-neutral-500">
-            <p className="text-sm">Calendar view in development.</p>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </h2>
+            <div className="flex items-center gap-4 text-xs text-neutral-500">
+              <span>Today: {selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+            </div>
+          </div>
+
+          {/* Day Headers */}
+          <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-wide text-neutral-500">
+            {dayNames.map((day) => (
+              <div key={day} className="py-1">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {days.map((day, index) => {
+              const dayDate = new Date(
+                currentMonth.getFullYear(),
+                currentMonth.getMonth(),
+                day
+              );
+              const dateStr = dayDate.toISOString().split("T")[0];
+              const dayTasks = tasks.filter((t) => t.createdAt.startsWith(dateStr));
+              const isToday =
+                dayDate.toDateString() === new Date().toDateString();
+              const isSelected = dayDate.toDateString() === selectedDate.toDateString();
+
+              if (day < 1) {
+                // Previous month padding
+                return (
+                  <div key={`prev-${index}`} className="min-h-[80px] rounded-md border border-neutral-900 bg-neutral-950/30 p-2 text-center text-xs text-neutral-600">
+                    {day}
+                  </div>
+                );
+              }
+
+              if (day > new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate()) {
+                // Next month padding
+                return (
+                  <div key={`next-${index}`} className="min-h-[80px] rounded-md border border-neutral-900 bg-neutral-950/30 p-2 text-center text-xs text-neutral-600">
+                    {day}
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => setSelectedDate(dayDate)}
+                  className={`min-h-[80px] rounded-md border p-2 text-center transition-all ${
+                    isSelected
+                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
+                      : "border-neutral-900 bg-neutral-950/50 hover:border-neutral-700"
+                  } ${isToday ? "border-amber-500/50 bg-amber-500/10 text-amber-400" : ""}`}
+                >
+                  <div className={`text-sm font-medium ${isSelected || isToday ? "font-bold" : ""}`}>
+                    {day}
+                  </div>
+                  {dayTasks.length > 0 && (
+                    <div className="mt-1 flex flex-wrap justify-center gap-1">
+                      <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] text-emerald-400">
+                        {dayTasks.length}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </section>
 
@@ -126,54 +243,44 @@ export default function CalendarView({ tasks, activity }: CalendarViewProps) {
           <aside className="min-h-[260px] w-full rounded-lg border border-neutral-900 bg-black/50 p-3 text-xs text-neutral-400 sm:w-72 sm:p-4">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-                Today&apos;s Events
+                Selected Date Tasks
               </h2>
               <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-500">
-                {tasks.filter((t) => t.status !== "done").length} tasks
+                {tasksDueOnDate.length} tasks
               </span>
             </div>
-            {tasks.filter((t) => t.status !== "done").length === 0 ? (
+            {tasksDueOnDate.length === 0 ? (
               <p className="text-xs text-neutral-500">
-                No tasks for today. Create a task to get started.
+                No tasks for {selectedDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.
               </p>
             ) : (
               <ul className="space-y-1.5">
-                {tasks
-                  .filter((t) => t.status !== "done")
-                  .slice(0, 20)
-                  .map((task) => (
-                    <li
-                      key={task.id}
-                      className="rounded-md border border-neutral-800 bg-neutral-950/80 p-2 text-xs text-neutral-100"
-                    >
-                      <div className="mb-1">
-                        <span className="font-medium">{task.title}</span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1 text-[10px] text-neutral-500">
-                        {task.assignee && (
-                          <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-300">
-                            {task.assignee}
-                          </span>
-                        )}
-                        {task.priority && (
-                          <span
-                            className="rounded-full px-2 py-0.5 text-[10px]"
-                            data-priority={task.priority}
-                          >
-                            {task.priority === "high" && (
-                              <span className="text-red-400">●● High</span>
-                            )}
-                            {task.priority === "medium" && (
-                              <span className="text-amber-300">● Medium</span>
-                            )}
-                            {task.priority === "low" && (
-                              <span className="text-emerald-300">● Low</span>
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    </li>
-                  ))}
+                {tasksDueOnDate.slice(0, 20).map((task) => (
+                  <li
+                    key={task.id}
+                    className="rounded-md border border-neutral-800 bg-neutral-950/80 p-2 text-xs text-neutral-100 hover:border-emerald-500/50 hover:bg-neutral-950/90 transition-colors"
+                  >
+                    <div className="mb-1 flex items-start justify-between gap-2">
+                      <span className="font-medium">{task.title}</span>
+                      {task.priority === "high" && (
+                        <span className="text-[9px] rounded-full bg-red-500/20 px-1.5 py-0.5 text-red-400">High</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1 text-[10px] text-neutral-500">
+                      {task.assignee && (
+                        <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-300">
+                          {task.assignee}
+                        </span>
+                      )}
+                      {task.priority === "medium" && (
+                        <span className="text-[9px] text-amber-300">● Medium</span>
+                      )}
+                      {task.priority === "low" && (
+                        <span className="text-[9px] text-emerald-300">● Low</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
               </ul>
             )}
           </aside>
