@@ -106,6 +106,22 @@ function saveToStorage<T>(key: string, value: T) {
 // TODO: Add Esc key listener to clear form
 // TODO: Add visual indicator for active shortcuts (e.g., ⌘K on Mac, Ctrl+K on Windows)
 
+// Keyboard shortcut helper
+function handleKeyDown(
+  e: React.KeyboardEvent,
+  addTask: () => void,
+  setNewTitle: (value: string) => void
+) {
+  // Enter key to submit task
+  if (e.key === "Enter") {
+    addTask();
+  }
+  // Esc key to clear form
+  if (e.key === "Escape") {
+    setNewTitle("");
+  }
+}
+
 export default function Home() {
   // TODO: Use storage adapter instead of direct localStorage calls
   // TODO: Add loading states for initial data fetch
@@ -185,6 +201,9 @@ export default function Home() {
     setNewAssignee("");
     setNewPriority("medium");
   }
+
+  // TODO: Add keyboard shortcuts for common actions (Enter to add, Esc to cancel)
+  // TODO: Add visual indicator for active shortcuts
 
   // TODO: Add input validation and error handling
   function moveTask(id: string, toStatus: TaskStatus) {
@@ -327,6 +346,7 @@ export default function Home() {
               placeholder="What needs to happen next?"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
+              onKeyDown={(e) => handleKeyDown(e, addTask, setNewTitle)}
               className="flex-1 rounded-md border border-neutral-800 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-emerald-500 focus:outline-none sm:px-3 sm:py-1.5 sm:text-sm"
             />
             <select
