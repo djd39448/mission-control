@@ -101,6 +101,11 @@ function saveToStorage<T>(key: string, value: T) {
   }
 }
 
+// TODO: Add keyboard shortcut helper function
+// TODO: Add Enter key listener for task creation
+// TODO: Add Esc key listener to clear form
+// TODO: Add visual indicator for active shortcuts (e.g., ⌘K on Mac, Ctrl+K on Windows)
+
 export default function Home() {
   // TODO: Use storage adapter instead of direct localStorage calls
   // TODO: Add loading states for initial data fetch
@@ -110,6 +115,10 @@ export default function Home() {
   const [activity, setActivity] = useState<ActivityEvent[]>(() =>
     loadFromStorage<ActivityEvent[]>(STORAGE_KEY_ACTIVITY, [])
   );
+
+  // TODO: Add keyboard shortcuts (Enter to add, Esc to cancel)
+  // TODO: Add global keyboard listener for shortcuts
+  // TODO: Add visual indicator for active shortcut
 
   const [newTitle, setNewTitle] = useState("");
   const [newAssignee, setNewAssignee] = useState("");
@@ -141,11 +150,15 @@ export default function Home() {
   }, [tasks]);
 
   // TODO: Add input validation and error handling
-  // TODO: Add animation for task creation
+  // TODO: Add animation for task creation (enter from right)
+  // TODO: Add animation for task movement (smooth transition)
+  // TODO: Add hover effects for task cards
   function addTask() {
     const title = newTitle.trim();
     if (!title) return;
-    // TODO: Validate title length, assignee format, priority selection
+    // TODO: Validate title length (min 3 chars, max 100)
+    // TODO: Validate assignee selection (not empty)
+    // TODO: Validate priority selection
     const now = new Date().toISOString();
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const task: Task = {
