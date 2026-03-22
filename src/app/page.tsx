@@ -18,6 +18,9 @@ import {
   type Task,
   type ActivityEvent,
 } from "@/lib/json-io";
+import type { ReactNode } from "react";
+import CalendarPage from "@/app/calendar/page";
+import ProjectsPage from "@/app/projects/page";
 
 // TODO: Add TypeScript strict mode enforcement
 // TODO: Consider adding error boundary for localStorage errors
@@ -32,6 +35,12 @@ const navItems = [
   { id: "team", label: "Team" },
   { id: "office", label: "Office" },
 ] as const;
+
+const PAGE_COMPONENTS: Record<string, ReactNode> = {
+  tasks: null, // Main page
+  calendar: <CalendarPage />,
+  projects: <ProjectsPage />,
+};
 
 const STATUSES = ["backlog", "in-progress", "review", "done"] as const;
 
@@ -297,13 +306,17 @@ export default function Home() {
               onChange={(e) => setNewTitle(e.target.value)}
               className="flex-1 rounded-md border border-neutral-800 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-emerald-500 focus:outline-none sm:px-3 sm:py-1.5 sm:text-sm"
             />
-            <input
-              type="text"
-              placeholder="Assignee (optional)"
+            <select
               value={newAssignee}
               onChange={(e) => setNewAssignee(e.target.value)}
-              className="w-full rounded-md border border-neutral-800 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-emerald-500 focus:outline-none sm:w-40 sm:px-3 sm:py-1.5 sm:text-sm"
-            />
+              className="w-full rounded-md border border-neutral-800 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 focus:border-emerald-500 focus:outline-none sm:w-40 sm:px-3 sm:py-1.5 sm:text-sm"
+            >
+              <option value="">Unassigned</option>
+              <option value="dave">Dave (owner)</option>
+              <option value="alex">Alex</option>
+              <option value="research">Research</option>
+              <option value="email-writer">Email Writer</option>
+            </select>
             <select
               value={newPriority}
               onChange={(e) => setNewPriority(e.target.value as any)}
