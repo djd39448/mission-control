@@ -103,6 +103,7 @@ function saveToStorage<T>(key: string, value: T) {
 
 export default function Home() {
   // TODO: Use storage adapter instead of direct localStorage calls
+  // TODO: Add loading states for initial data fetch
   const [tasks, setTasks] = useState<Task[]>(() =>
     loadFromStorage<Task[]>(STORAGE_KEY_TASKS, [])
   );
@@ -117,6 +118,9 @@ export default function Home() {
   );
 
   // TODO: Add state for import feedback (success/error messages)
+  // TODO: Add undo/redo stack for task changes
+  // TODO: Add keyboard shortcuts (Enter to add, Esc to cancel)
+  // TODO: Add loading state for task operations
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
   // TODO: Use adapter.set() instead of direct localStorage.setItem
@@ -137,9 +141,11 @@ export default function Home() {
   }, [tasks]);
 
   // TODO: Add input validation and error handling
+  // TODO: Add animation for task creation
   function addTask() {
     const title = newTitle.trim();
     if (!title) return;
+    // TODO: Validate title length, assignee format, priority selection
     const now = new Date().toISOString();
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const task: Task = {
@@ -225,6 +231,10 @@ export default function Home() {
     if (openTasks.length === 1) return openTasks[0].title;
     return `${openTasks[0].title} (+${openTasks.length - 1} more)`;
   }, [tasks]);
+
+  // TODO: Add animation for task creation (enter from right)
+  // TODO: Add animation for task movement (smooth transition)
+  // TODO: Add hover effects for task cards
 
   return (
     <div className="flex min-h-screen bg-neutral-950 text-neutral-100">
